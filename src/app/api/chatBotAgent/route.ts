@@ -2,15 +2,15 @@
 This file is the API route for the chat bot agent.
 Import the custom content from the data folder see exampleDataContent.ts for an example.
 Then construct the system prompt acoordingly.
-It uses the Google Gemini API to generate the response.
+It uses the AI SDK model providers to generate the response.
 The API key should be stored in the environment variables.
 */
 
 import { generateText } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { NextResponse } from 'next/server';
 
 import { beerProfiles, surrealisteBasics } from '@/data/exampleDataContent';
+import { registry } from '@/lib/ai-config';
 
 export const runtime = 'nodejs';
 
@@ -35,14 +35,12 @@ type IncomingMessage = {
 };
 
 export async function POST(request: Request) {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'Missing Gemini API key' }, { status: 500 });
-  }
-
   try {
-    const googleProvider = createGoogleGenerativeAI({ apiKey });
     const body = await request.json();
+    const modelSelection = registry.languageModel({
+      provider: typeof body?.provider === 'string' ? body.provider : undefined,
+      model: typeof body?.model === 'string' ? body.model : undefined,
+    });
     const incomingMessages: IncomingMessage[] = Array.isArray(body?.messages) ? body.messages : [];
 
     const conversation = incomingMessages
@@ -56,8 +54,15 @@ export async function POST(request: Request) {
         content: entry.content.slice(0, 4000),
       }));
 
+    if ('error' in modelSelection) {
+      return NextResponse.json(
+        { error: modelSelection.error },
+        { status: modelSelection.status },
+      );
+    }
+
     const { text } = await generateText({
-      model: googleProvider('models/gemini-2.5-flash'),
+      model: modelSelection.model,
       system: systemPrompt,
       messages: conversation,
     });

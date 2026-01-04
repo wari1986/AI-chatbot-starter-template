@@ -60,7 +60,8 @@ const ChatBotWidget = (): React.JSX.Element => {
     setMessages(nextMessages);
     console.log('submitted:', nextMessages);
     try {
-      const response = await sendPrompt(nextMessages);
+      // const response = await sendPrompt(nextMessages);
+      const response = await sendPrompt({ messages: nextMessages, provider: 'openai', model: 'gpt-4.1-nano' });
       const reply = response?.reply?.trim();
       if (!reply) return;
 

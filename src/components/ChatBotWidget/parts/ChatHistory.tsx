@@ -28,13 +28,15 @@ const ChatHistory = (props: Props) => {
   const { items } = props;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-white via-slate-50 to-slate-100 px-4 py-4 sm:flex-none sm:min-h-[320px] sm:max-h-[420px]">
+    <div className="flex flex-col gap-3">
       {items.map((message) => {
         const isUser = message.role === 'user';
 
         return (
           <div
             key={message.id}
+            data-message-id={message.id}
+            data-message-role={message.role}
             className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}
           >
             <div

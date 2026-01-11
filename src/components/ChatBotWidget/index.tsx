@@ -44,8 +44,28 @@ const ChatBotWidget = (): React.JSX.Element => {
 
   // EFFECTS
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
+
+    if (lastMessage.role === 'assistant') {
+      const userMessages = container.querySelectorAll<HTMLElement>('[data-message-role="user"]');
+      const lastUserMessage = userMessages[userMessages.length - 1];
+      if (lastUserMessage) {
+        const containerRect = container.getBoundingClientRect();
+        const messageRect = lastUserMessage.getBoundingClientRect();
+        const paddingTop = Number.parseFloat(getComputedStyle(container).paddingTop || '0');
+        const delta = messageRect.top - containerRect.top;
+        const targetTop = Math.max(0, container.scrollTop + delta - paddingTop);
+        container.scrollTo({ top: targetTop, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    container.scrollTo({
+      top: container.scrollHeight,
       behavior: 'smooth',
     });
   }, [messages]);
@@ -95,7 +115,10 @@ const ChatBotWidget = (): React.JSX.Element => {
       {isOpen ? (
         <div className="flex h-[70vh] flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur sm:h-auto">
           <ChatHeader onClose={() => setIsOpen(false)} />
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto sm:flex-none">
+          <div
+            ref={scrollRef}
+            className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-white via-slate-50 to-slate-100 px-4 py-3 sm:flex-none sm:min-h-[320px] sm:max-h-[420px]"
+          >
             <ChatHistory items={messages} />
           </div>
           <ChatComposer

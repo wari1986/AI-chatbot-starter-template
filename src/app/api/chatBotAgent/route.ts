@@ -1,7 +1,7 @@
 /*
 This file is the API route for the chat bot agent.
 Import the custom content from the data folder see exampleDataContent.ts for an example.
-Then construct the system prompt acoordingly.
+Then construct the system prompt accordingly.
 It uses the AI SDK model providers to generate the response.
 The API key should be stored in the environment variables.
 */
@@ -26,7 +26,8 @@ const systemPrompt = [
     .map((beer) => `${beer.name} (${beer.style}) - ${beer.notes}`)
     .join(' | ')}`,
   'Keep replies under 120 words. Offer clear next steps when possible.',
-  'Only answer questions related to the brewery, the beer and food menu, for all other topics, tell the user you can only help with beer and brewery related questions. Dont show links and for booking related questions, tell the user to use the booking portal on the website.',
+  'Always respond with helpful taproom information, even outside opening hours; never decline due to time of day.',
+  'Only answer questions related to the brewery, the beer and food menu; for all other topics, tell the user you can only help with beer and brewery related questions. Do not show links and for booking related questions, tell the user to use the booking portal on the website.',
 ].join('\n');
 
 type IncomingMessage = {
@@ -37,10 +38,6 @@ type IncomingMessage = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const modelSelection = registry.languageModel({
-      provider: typeof body?.provider === 'string' ? body.provider : undefined,
-      model: typeof body?.model === 'string' ? body.model : undefined,
-    });
     const incomingMessages: IncomingMessage[] = Array.isArray(body?.messages) ? body.messages : [];
 
     const conversation = incomingMessages
@@ -53,6 +50,11 @@ export async function POST(request: Request) {
         role: entry.role,
         content: entry.content.slice(0, 4000),
       }));
+
+    const modelSelection = registry.languageModel({
+      provider: typeof body?.provider === 'string' ? body.provider : undefined,
+      model: typeof body?.model === 'string' ? body.model : undefined,
+    });
 
     if ('error' in modelSelection) {
       return NextResponse.json(
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ reply: text ?? '' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Gemini concierge error', error);
+    console.error('Chat concierge error', error);
     return NextResponse.json(
       { error: 'Failed to process request', details: message },
       { status: 500 },

@@ -4,10 +4,15 @@ type ReplyPayload = {
   reply?: string | null;
 };
 
-export const createMessageId = () => Math.random().toString(36).slice(2, 10);
+export const createMessageId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+};
 
 export const toApiMessages = (messages: ChatMessage[]) =>
-  messages.map(({ role, content }) => ({ role, content }));
+  messages.map(({ id, role, content }) => ({ id, role, content }));
 
 export const getReplyText = (data: ReplyPayload | null) => {
   const reply = data?.reply;

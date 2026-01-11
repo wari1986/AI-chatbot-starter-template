@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { MessageCircle } from 'lucide-react';
 
-import { createMessageId } from './helpers';
+import { createMessageId, getReplyText, toApiMessages } from './helpers';
 import type { ChatMessage, ChatFormValues } from '@/types';
 
 import ChatHeader from './parts/ChatHeader';
 import { useChatBotAgent } from '@/services/ai';
 import ChatComposer from './parts/ChatComposer';
 import ChatHistory from './parts/ChatHistory';
+
+const providerFromEnv = process.env.NEXT_PUBLIC_AI_PROVIDER?.trim() || 'openai';
+const modelFromEnv = process.env.NEXT_PUBLIC_AI_MODEL?.trim();
 
 const defaultMessage: ChatMessage[] = [
   {
@@ -25,6 +28,7 @@ const ChatBotWidget = (): React.JSX.Element => {
   // STATE
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => defaultMessage);
+  const [error, setError] = useState<string | null>(null);
 
   // RHF
   const methods = useForm<ChatFormValues>({
@@ -51,6 +55,7 @@ const ChatBotWidget = (): React.JSX.Element => {
     const trimmed = formValues.message.trim();
     if (!trimmed || isPending) return;
 
+    setError(null);
     const nextMessages: ChatMessage[] = [
       ...messages,
       { id: createMessageId(), role: 'user', content: trimmed },
@@ -58,24 +63,28 @@ const ChatBotWidget = (): React.JSX.Element => {
 
     // Optimistically render the user message.
     setMessages(nextMessages);
-    console.log('submitted:', nextMessages);
     try {
-      // const response = await sendPrompt(nextMessages);
-      const response = await sendPrompt({ messages: nextMessages, provider: 'openai', model: 'gpt-4.1-nano' });
-      const reply = response?.reply?.trim();
+      const response = await sendPrompt({
+        messages: toApiMessages(nextMessages),
+        provider: providerFromEnv,
+        model: modelFromEnv,
+      });
+      const reply = getReplyText(response ?? null);
       if (!reply) return;
 
       setMessages((prev) => [
         ...prev,
         { id: createMessageId(), role: 'assistant', content: reply },
       ]);
-    } catch {
+    } catch (mutationError) {
+      console.error('Chat send failed', mutationError);
+      setError('Unable to reach the concierge right now. Please try again in a moment.');
       setMessages((prev) => [
         ...prev,
         {
           id: createMessageId(),
           role: 'assistant',
-          content: 'Sorry — something went wrong while contacting the AI. Please try again.',
+          content: 'Sorry — something went wrong. Please try again.',
         },
       ]);
     }
@@ -89,7 +98,12 @@ const ChatBotWidget = (): React.JSX.Element => {
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto sm:flex-none">
             <ChatHistory items={messages} />
           </div>
-          <ChatComposer onSubmit={handleSubmitMessage} methods={methods} />
+          <ChatComposer
+            error={error}
+            isPending={isPending}
+            onSubmit={handleSubmitMessage}
+            methods={methods}
+          />
         </div>
       ) : (
         <button

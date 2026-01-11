@@ -20,8 +20,8 @@ const DemoCard = () => {
         </p>
       </div>
       <div className="flex flex-wrap gap-3">
-        <Link className={cn(buttonVariants(), 'gap-2')} href="/dashboard">
-          Explore the app area <ArrowRight className="h-4 w-4" />
+        <Link className={cn(buttonVariants(), 'gap-2')} href="/">
+          Explore the site <ArrowRight className="h-4 w-4" />
         </Link>
         <a
           className={cn(buttonVariants({ variant: 'secondary' }))}
